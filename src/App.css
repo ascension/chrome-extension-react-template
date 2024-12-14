@@ -1,42 +1,126 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
+/* Reset and base styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #ffffff;
+  color: #333;
+}
+
+.extension-popup {
+  min-width: 300px;
+  max-width: 400px;
+  padding: 16px;
+  background: #ffffff;
+}
+
+/* Header styles */
+header {
+  margin-bottom: 20px;
+  text-align: center;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #eaeaea;
+}
+
+header h1 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 4px;
+}
+
+header div {
+  font-size: 12px;
+  color: #666;
+}
+
+/* Status indicator styles */
+.status-indicator {
+  padding: 12px;
+  border-radius: 8px;
+  margin: 16px 0;
+  font-size: 14px;
+  transition: background-color 0.3s ease;
   text-align: center;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+/* Product info styles */
+.product-info {
+  font-size: 12px;
+  color: #666;
+  padding: 8px 0;
+  border-top: 1px solid #eaeaea;
+  margin-top: 12px;
 }
 
-@keyframes logo-spin {
+/* Instructions section */
+.instructions {
+  margin-top: 16px;
+  padding: 12px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.instructions strong {
+  display: block;
+  margin-bottom: 8px;
+  color: #1a1a1a;
+}
+
+.instructions ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.instructions li {
+  margin: 4px 0;
+  color: #4a4a4a;
+  line-height: 1.4;
+}
+
+/* Animations */
+@keyframes fadeIn {
   from {
-    transform: rotate(0deg);
+    opacity: 0;
+    transform: translateY(-10px);
   }
   to {
-    transform: rotate(360deg);
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
+.extension-popup {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Status colors */
+.status-exists {
+  background-color: #e6ffe6;
+  color: #0a5f0a;
+}
+
+.status-not-exists {
+  background-color: #ffe6e6;
+  color: #5f0a0a;
+}
+
+.status-checking {
+  background-color: #f0f0f0;
+  color: #4a4a4a;
+}
+
+/* Responsive adjustments */
+@media (max-width: 320px) {
+  .extension-popup {
+    min-width: 250px;
+    padding: 12px;
   }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
 }

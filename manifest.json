@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "Hive 3D Harvest",
+  "version": "1.0.0",
+  "description": "Harvest 3D printing materials from Amazon",
+  "permissions": [
+    "storage",
+    "tabs",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://*.amazon.com/*",
+    "https://tdutfrehwalqpriivgvq.supabase.co/*"
+  ],
+  "background": {
+    "service_worker": "assets/background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://*.amazon.com/*"],
+      "js": ["assets/contentScript.js"]
+    }
+  ],
+  "action": {
+    "default_popup": "index.html"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self' https://tdutfrehwalqpriivgvq.supabase.co"
+  },
+  "web_accessible_resources": [{
+    "resources": [
+      "index.html",
+      "assets/*"
+    ],
+    "matches": ["<all_urls>"]
+  }]
+}

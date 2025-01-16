@@ -2,50 +2,49 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
 import { resolve } from 'path';
+// https://vitejs.dev/config/
 export default defineConfig({
     plugins: [
         react(),
         viteStaticCopy({
             targets: [
                 {
-                    src: 'public/manifest.json',
+                    src: 'manifest.json',
                     dest: '.'
+                },
+                {
+                    src: 'public/icons/*',
+                    dest: 'icons/'
                 }
             ]
         })
     ],
     build: {
-        outDir: 'build',
+        outDir: 'dist',
+        emptyOutDir: true,
+        sourcemap: true,
         rollupOptions: {
             input: {
                 main: resolve(__dirname, 'index.html'),
-                background: resolve(__dirname, 'src/background.js'),
-                contentScript: resolve(__dirname, 'src/contentScript.js')
+                background: resolve(__dirname, 'src/background.ts'),
+                contentScript: resolve(__dirname, 'src/contentScript.ts')
             },
             output: {
                 entryFileNames: function (chunkInfo) {
-                    // Ensure background and content scripts maintain their names
-                    if (['background', 'contentScript'].includes(chunkInfo.name)) {
+                    if (chunkInfo.name === 'background' || chunkInfo.name === 'contentScript') {
                         return 'assets/[name].js';
                     }
                     return 'assets/[name]-[hash].js';
                 },
                 chunkFileNames: 'assets/[name]-[hash].js',
-                assetFileNames: 'assets/[name].[ext]'
+                assetFileNames: 'assets/[name]-[hash][extname]'
             }
         },
-        sourcemap: true,
-        // Ensure proper bundling for extension
-        target: 'esnext',
-        minify: false, // Easier for debugging
+        target: 'esnext'
     },
     resolve: {
         alias: {
-            '@': resolve(__dirname, 'src')
+            '@': resolve(__dirname, './src')
         }
-    },
-    // Configure optimization for extension
-    optimizeDeps: {
-        include: ['@supabase/supabase-js']
     }
 });

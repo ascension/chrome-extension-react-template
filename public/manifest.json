@@ -8,10 +8,13 @@
     },
     "permissions": [
         "activeTab",
-        "storage"
+        "storage",
+        "runtime",
+        "tabs"
     ],
     "host_permissions": [
-        "https://*.amazon.com/*"
+        "https://*.amazon.com/*",
+        "https://tdutfrehwalqpriivgvq.supabase.co/*"
     ],
     "content_scripts": [
         {
@@ -22,5 +25,15 @@
     "background": {
         "service_worker": "assets/background.js",
         "type": "module"
-    }
+    },
+    "content_security_policy": {
+        "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self' https://tdutfrehwalqpriivgvq.supabase.co"
+    },
+    "web_accessible_resources": [{
+        "resources": [
+            "index.html",
+            "assets/*"
+        ],
+        "matches": ["<all_urls>"]
+    }]
 }

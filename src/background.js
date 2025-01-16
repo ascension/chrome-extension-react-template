@@ -90,6 +90,21 @@ async function createMaterial(materialInfo) {
             throw error;
         }
 
+        try {
+            await supabase
+            .from('inventory_items')
+            .insert([{ 
+                organization_id: SUPABASE_CONFIG.organizationId,
+                material_id: data.id,
+                minimum_stock: 1,
+                quantity: 0
+            }])
+            .select()
+            .single();
+        } catch (error) {
+            console.error('Error creating inventory_item:', error);
+        }
+
         return data;
     } catch (error) {
         console.error('Error creating material:', error);

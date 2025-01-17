@@ -202,6 +202,7 @@ async function checkProductInDatabase(productInfo: ProductInfo): Promise<boolean
       .from(SUPABASE_CONFIG.materialsTable)
       .select('*')
       .eq('asin', productInfo.productId)
+      .limit(1)
       .single()
 
     if (error) {

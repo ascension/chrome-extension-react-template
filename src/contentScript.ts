@@ -67,6 +67,51 @@ const createDebugContainer = () => {
   return container;
 };
 
+// Function to get the currently selected variant image
+const getCurrentVariantImage = (): string | undefined => {
+  // Try to get image URL from data script tag first
+  const imageDataScript = document.querySelector('script[data-a-state*="desktop-landing-image-data"]');
+  if (imageDataScript) {
+    try {
+      const scriptContent = imageDataScript.textContent || '';
+      const imageData = JSON.parse(scriptContent);
+      if (imageData.landingImageUrl) {
+        return imageData.landingImageUrl.replace(/\._.*_\./, '.'); // Remove size constraints
+      }
+    } catch (e) {
+      debugLog('getCurrentVariantImage', 'Failed to parse image data script', e);
+    }
+  }
+
+  // Try to get image from the currently selected variant
+  const selectors = [
+    'li.image.item.selected img.a-dynamic-image',  // New layout selected variant
+    '#main-image-container img.selected',          // Alternative layout selected
+    '#imgBlkFront.selected',                      // Legacy layout selected
+    '#landingImage.selected',                     // Legacy layout selected
+    '#landingImage[data-old-hires]',             // Image with high-res data attribute
+    '#imgBlkFront[data-old-hires]',              // Alternative image with high-res
+    '#landingImage',                             // Fallback to main image
+    '#imgBlkFront',                              // Fallback to alternative main
+    '#main-image-container img'                   // Final fallback
+  ];
+
+  for (const selector of selectors) {
+    const image = document.querySelector(selector);
+    if (image instanceof HTMLImageElement) {
+      // Try to get high resolution version first
+      const hiRes = image.getAttribute('data-old-hires');
+      if (hiRes) {
+        return hiRes;
+      }
+      // Fallback to src, removing Amazon's size constraints
+      return image.src.replace(/\._[^.]*(\.[^.]*)$/, '$1');
+    }
+  }
+
+  return undefined;
+};
+
 // Function to extract product information from Amazon page
 const extractProductInfo = (): ProductInfo | null => {
   debugLog('extractProductInfo', 'Starting product info extraction');
@@ -77,42 +122,9 @@ const extractProductInfo = (): ProductInfo | null => {
     return null;
   }
 
-  // Extract image URL
-  let imageUrl: string | undefined;
-  
-  // Try to get image URL from data script tag first
-  const imageDataScript = document.querySelector('script[data-a-state*="desktop-landing-image-data"]');
-  if (imageDataScript) {
-    try {
-      const scriptContent = imageDataScript.textContent || '';
-      const imageData = JSON.parse(scriptContent);
-      if (imageData.landingImageUrl) {
-        imageUrl = imageData.landingImageUrl.replace(/\._.*_\./, '.'); // Remove size constraints
-        debugLog('extractProductInfo', 'Found image URL in data script', imageUrl);
-      }
-    } catch (e) {
-      debugLog('extractProductInfo', 'Failed to parse image data script', e);
-    }
-  }
-
-  // Fall back to img tag if script method fails
-  if (!imageUrl) {
-    // Try legacy selectors first
-    const imageElement = document.querySelector('#landingImage, #imgBlkFront');
-    if (imageElement instanceof HTMLImageElement) {
-      imageUrl = imageElement.src.replace(/\._[^.]*(\.[^.]*)$/, '$1');
-      debugLog('extractProductInfo', 'Found image URL in legacy selectors', imageUrl);
-    }
-    
-    // Try new layout as final fallback
-    if (!imageUrl) {
-      const newLayoutImage = document.querySelector('li.image.item.selected img.a-dynamic-image');
-      if (newLayoutImage instanceof HTMLImageElement) {
-        imageUrl = newLayoutImage.src.replace(/\._[^.]*(\.[^.]*)$/, '$1');
-        debugLog('extractProductInfo', 'Found image URL in new layout', imageUrl);
-      }
-    }
-  }
+  // Extract image URL using the getCurrentVariantImage helper
+  const imageUrl = getCurrentVariantImage();
+  debugLog('extractProductInfo', imageUrl ? 'Found image URL' : 'No image URL found', imageUrl);
 
   // Extract brand information
   const brandElement = document.querySelector('#bylineInfo');
@@ -188,17 +200,76 @@ const extractProductInfo = (): ProductInfo | null => {
 const addStatusIndicator = (): HTMLDivElement => {
   const container = document.createElement('div');
   container.id = 'print-hive-status';
+  
+  // Create close button
+  const closeButton = document.createElement('span');
+  closeButton.innerHTML = '&times;';
+  closeButton.style.cssText = `
+    display: inline-block;
+    margin-left: 10px;
+    cursor: pointer;
+    font-size: 18px;
+    color: #666;
+    vertical-align: middle;
+  `;
+  closeButton.addEventListener('click', () => {
+    container.remove();
+  });
+
+  // Create content container for status text
+  const contentContainer = document.createElement('span');
+  contentContainer.style.cssText = `
+    display: inline-block;
+    vertical-align: middle;
+  `;
+  contentContainer.id = 'print-hive-status-text';
+
+  // Add drag functionality
+  let isDragging = false;
+  let currentX: number;
+  let currentY: number;
+  let initialX: number;
+  let initialY: number;
+
+  container.addEventListener('mousedown', (e) => {
+    isDragging = true;
+    initialX = e.clientX - container.offsetLeft;
+    initialY = e.clientY - container.offsetTop;
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (isDragging) {
+      e.preventDefault();
+      currentX = e.clientX - initialX;
+      currentY = e.clientY - initialY;
+      container.style.left = `${currentX}px`;
+      container.style.top = `${currentY}px`;
+    }
+  });
+
+  document.addEventListener('mouseup', () => {
+    isDragging = false;
+  });
+
   container.style.cssText = `
     position: fixed;
     top: 20px;
     right: 20px;
-    padding: 10px 20px;
+    padding: 8px 15px;
     background-color: #f0f0f0;
     border: 1px solid #ccc;
     border-radius: 5px;
     z-index: 9999;
     font-family: Arial, sans-serif;
+    cursor: move;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 5px;
   `;
+
+  container.appendChild(contentContainer);
+  container.appendChild(closeButton);
   document.body.appendChild(container);
   return container;
 };
@@ -337,7 +408,10 @@ const checkProductStatus = async (): Promise<void> => {
   if (!productInfo) return;
 
   const statusContainer = addStatusIndicator();
-  statusContainer.textContent = 'Checking product status...';
+  const statusText = statusContainer.querySelector('#print-hive-status-text');
+  if (statusText) {
+    statusText.textContent = 'Checking product status...';
+  }
 
   try {
     // Send message to background script
@@ -352,7 +426,10 @@ const checkProductStatus = async (): Promise<void> => {
         (response) => {
           if (chrome.runtime.lastError) {
             debugLog('checkProductStatus', 'Error sending message', chrome.runtime.lastError);
-            statusContainer.textContent = '❌ Error checking product';
+            const statusText = statusContainer.querySelector('#print-hive-status-text');
+            if (statusText instanceof HTMLElement) {
+              statusText.textContent = '❌ Error checking product';
+            }
             statusContainer.style.backgroundColor = '#ffe6e6';
             reject(chrome.runtime.lastError);
             return;
@@ -360,21 +437,30 @@ const checkProductStatus = async (): Promise<void> => {
 
           debugLog('checkProductStatus', 'Received check product response', response);
           if (response.error === 'Not authenticated') {
-            statusContainer.textContent = '🔒 Please log in to Print Hive';
-            statusContainer.style.backgroundColor = '#fff3cd';
-            statusContainer.style.color = '#856404';
+            const statusText = statusContainer.querySelector('#print-hive-status-text');
+            if (statusText instanceof HTMLElement) {
+              statusText.textContent = '🔒 Please log in to Print Hive';
+              statusContainer.style.backgroundColor = '#fff3cd';
+              statusText.style.color = '#856404';
+            }
             chrome.runtime.sendMessage({ type: 'SHOW_LOGIN' });
             resolve();
             return;
           }
 
           if (response.exists) {
-            statusContainer.textContent = '✅ Product exists in database';
-            statusContainer.style.backgroundColor = '#e6ffe6';
+            const statusText = statusContainer.querySelector('#print-hive-status-text');
+            if (statusText instanceof HTMLElement) {
+              statusText.textContent = '✅ Product exists in database';
+              statusContainer.style.backgroundColor = '#e6ffe6';
+            }
             addTitleIndicator(true, productInfo);
           } else {
-            statusContainer.textContent = '❌ Product not found in database';
-            statusContainer.style.backgroundColor = '#ffe6e6';
+            const statusText = statusContainer.querySelector('#print-hive-status-text');
+            if (statusText instanceof HTMLElement) {
+              statusText.textContent = '❌ Product not found in database';
+              statusContainer.style.backgroundColor = '#ffe6e6';
+            }
             addTitleIndicator(false, productInfo);
           }
           resolve();
@@ -383,8 +469,11 @@ const checkProductStatus = async (): Promise<void> => {
     });
   } catch (error) {
     debugLog('checkProductStatus', 'Error checking product status', error);
-    statusContainer.textContent = '❌ Error checking product';
-    statusContainer.style.backgroundColor = '#ffe6e6';
+    const statusText = statusContainer.querySelector('#print-hive-status-text');
+    if (statusText instanceof HTMLElement) {
+      statusText.textContent = '❌ Error checking product';
+      statusContainer.style.backgroundColor = '#ffe6e6';
+    }
   }
 };
 
@@ -401,20 +490,37 @@ if (document.readyState === 'complete') {
   });
 }
 
-// Listen for URL changes (for single-page navigation)
+// Initialize state variables for URL and image tracking
 let lastUrl = location.href;
-debugLog('init', 'Setting up URL change observer', { initialUrl: lastUrl });
+let lastImageUrl: string | undefined;
+debugLog('init', 'Setting up change observers', { initialUrl: lastUrl });
 
+// Create mutation observer for both URL and variant changes
 const observer = new MutationObserver(() => {
-  const url = location.href;
-  if (url !== lastUrl) {
-    debugLog('urlChange', 'URL changed', { from: lastUrl, to: url });
-    lastUrl = url;
+  const currentUrl = location.href;
+  const currentImageUrl = getCurrentVariantImage();
+  
+  // Check if either URL or image has changed
+  if (currentUrl !== lastUrl || currentImageUrl !== lastImageUrl) {
+    debugLog('change', 'Product changed', { 
+      urlChanged: currentUrl !== lastUrl,
+      imageChanged: currentImageUrl !== lastImageUrl,
+      from: { url: lastUrl, image: lastImageUrl },
+      to: { url: currentUrl, image: currentImageUrl }
+    });
+    
+    lastUrl = currentUrl;
+    lastImageUrl = currentImageUrl;
     checkProductStatus();
   }
 });
 
-// Start observing
-observer.observe(document, { subtree: true, childList: true });
+// Start observing with configuration for variant changes
+observer.observe(document, { 
+  subtree: true, 
+  childList: true,
+  attributes: true, 
+  attributeFilter: ['class', 'src', 'selected'] 
+});
 
 debugLog('init', 'Content script initialization complete');

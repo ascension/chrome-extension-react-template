@@ -37,6 +37,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // Function to check if product exists in Supabase database
 async function checkProductInDatabase(productInfo) {
     try {
+        debugger
         const { data, error } = await supabase
             .from(SUPABASE_CONFIG.materialsTable)
             .select('*')

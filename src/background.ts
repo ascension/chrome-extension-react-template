@@ -80,7 +80,12 @@ self.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
 });
 
 // Message types and interfaces
-type MessageType = 'CHECK_PRODUCT' | 'ADD_PRODUCT' | 'SHOW_LOGIN' | 'OPEN_COLOR_ANALYZER' | 'GET_PRODUCT_INFO' | 'DEBUG_LOG';
+type MessageType = 'CHECK_PRODUCT' | 'ADD_PRODUCT' | 'SHOW_LOGIN' | 'OPEN_COLOR_ANALYZER' | 'GET_PRODUCT_INFO' | 'DEBUG_LOG' | 'CREATE_MODEL' | 'CHECK_MODEL_EXISTS';
+
+interface BaseMessage<T = unknown> {
+  type: MessageType;
+  data: T;
+}
 
 interface ProductInfo {
   productId: string
@@ -122,44 +127,73 @@ interface AddProductResponse {
   material?: Material;
 }
 
-interface BaseMessage {
-  type: MessageType;
-  data: ProductInfo | Record<string, unknown>;
-}
-
-interface CheckProductMessage extends BaseMessage {
+interface CheckProductMessage extends BaseMessage<ProductInfo> {
   type: 'CHECK_PRODUCT';
-  data: ProductInfo;
 }
 
-interface AddProductMessage extends BaseMessage {
+interface AddProductMessage extends BaseMessage<ProductInfo> {
   type: 'ADD_PRODUCT';
-  data: ProductInfo;
 }
 
 interface ShowLoginMessage extends Omit<BaseMessage, 'data'> {
   type: 'SHOW_LOGIN';
 }
 
-interface OpenColorAnalyzerMessage extends BaseMessage {
+interface OpenColorAnalyzerMessage extends BaseMessage<ProductInfo> {
   type: 'OPEN_COLOR_ANALYZER';
-  data: ProductInfo;
 }
 
 interface GetProductInfoMessage extends Omit<BaseMessage, 'data'> {
   type: 'GET_PRODUCT_INFO';
 }
 
-interface DebugLogMessage extends BaseMessage {
+interface DebugLogMessage extends BaseMessage<{
+  source: string;
+  message: string;
+  data?: unknown;
+}> {
   type: 'DEBUG_LOG';
-  data: {
-    source: string;
-    message: string;
-    data?: unknown;
+}
+
+interface CreateModelData {
+  modelId: string;
+  url: string;
+  name: string;
+  designer: string;
+  images: string[];
+  source: 'thangs' | 'patreon';
+  metadata?: {
+    modelUrl?: string;
+    postId?: string;
+    [key: string]: unknown;
   };
 }
 
-type Message = CheckProductMessage | AddProductMessage | ShowLoginMessage | OpenColorAnalyzerMessage | GetProductInfoMessage | DebugLogMessage;
+interface CreateModelMessage extends BaseMessage<CreateModelData> {
+  type: 'CREATE_MODEL';
+}
+
+interface ModelResponse {
+  id: string;
+  name: string;
+  designer: string;
+  images: string[];
+  sourceUrl: string;
+  sourceId: string;
+  source: string;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface CheckModelExistsMessage extends BaseMessage<{
+  source: string;
+  sourceId: string;
+}> {
+  type: 'CHECK_MODEL_EXISTS';
+}
+
+type Message = CheckProductMessage | AddProductMessage | ShowLoginMessage | OpenColorAnalyzerMessage | GetProductInfoMessage | DebugLogMessage | CreateModelMessage | CheckModelExistsMessage;
 
 // Store current product info for color analyzer
 let currentProductInfo: ProductInfo | null = null;
@@ -347,6 +381,23 @@ function isMessageData(data: unknown): data is ProductInfo {
   );
 }
 
+// Type guard for CreateModelData
+function isCreateModelData(data: unknown): data is CreateModelData {
+  if (typeof data !== 'object' || data === null) return false;
+  
+  const msg = data as Partial<CreateModelData>;
+  return (
+    typeof msg.modelId === 'string' &&
+    typeof msg.url === 'string' &&
+    typeof msg.name === 'string' &&
+    typeof msg.designer === 'string' &&
+    Array.isArray(msg.images) &&
+    msg.images.every((i: unknown): i is string => typeof i === 'string') &&
+    (msg.source === 'thangs' || msg.source === 'patreon') &&
+    (msg.metadata === undefined || typeof msg.metadata === 'object')
+  );
+}
+
 // Type guard for messages
 function isValidMessage(message: unknown): message is Message {
   if (typeof message !== 'object' || message === null) return false;
@@ -364,6 +415,10 @@ function isValidMessage(message: unknown): message is Message {
       return true;
     case 'DEBUG_LOG':
       return typeof msg.data === 'object' && msg.data !== null;
+    case 'CREATE_MODEL':
+      return isCreateModelData(msg.data);
+    case 'CHECK_MODEL_EXISTS':
+      return typeof msg.data === 'object' && msg.data !== null;
     default:
       return false;
   }
@@ -372,32 +427,23 @@ function isValidMessage(message: unknown): message is Message {
 debugLog('ServiceWorker', 'Setting up message listener');
 
 // Message handler
-chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
   debugLog('onMessage', 'Received message', message);
+
   if (!isValidMessage(message)) {
-    debugLog('onMessage', 'Invalid message format');
-    return false;
+    debugLog('onMessage', 'Invalid message format', message);
+    sendResponse({ error: 'Invalid message format' });
+    return true;
   }
 
-  debugLog('onMessage', 'Message details', {
-    type: message.type,
-    sender: sender.tab ? `Tab ${sender.tab.id}` : 'Extension',
-    url: sender.tab?.url
-  });
-
-  let debugLogData: DebugLogMessage['data'] | undefined;
-  let checkResponse: CheckProductResponse | undefined;
-  let productAddResponse: AddProductResponse | undefined;
-
-  // Handle message asynchronously
   const handleMessage = async () => {
     try {
       debugLog('onMessage', 'Processing message', { type: message.type });
-      
+
       switch (message.type) {
         case 'CHECK_PRODUCT': {
           debugLog('onMessage', 'Processing CHECK_PRODUCT', message.data);
-          checkResponse = await checkProduct(message.data.productId, message.data.url);
+          const checkResponse = await checkProduct(message.data.productId, message.data.url);
           debugLog('onMessage', 'CHECK_PRODUCT response ready', checkResponse);
           sendResponse(checkResponse);
           break;
@@ -405,7 +451,7 @@ chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) =>
 
         case 'ADD_PRODUCT': {
           debugLog('onMessage', 'Processing ADD_PRODUCT', message.data);
-          productAddResponse = await addProduct(message.data);
+          const productAddResponse = await addProduct(message.data);
           debugLog('onMessage', 'ADD_PRODUCT response ready', productAddResponse);
           sendResponse(productAddResponse);
           break;
@@ -430,10 +476,38 @@ chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) =>
           break;
 
         case 'DEBUG_LOG':
-          if (debugLogData) {
-            debugLog(debugLogData.source, debugLogData.message, debugLogData.data);
+          if (message.data) {
+            debugLog(message.data.source, message.data.message, message.data.data);
           }
           sendResponse({ success: true });
+          break;
+
+        case 'CREATE_MODEL':
+          debugLog('onMessage', 'Processing CREATE_MODEL', message.data);
+          try {
+            const result = await createModel(message.data);
+            sendResponse({ success: true, data: result });
+          } catch (error) {
+            debugLog('onMessage', 'Error creating model', error);
+            sendResponse({ 
+              success: false, 
+              error: error instanceof Error ? error.message : 'Failed to create model' 
+            });
+          }
+          break;
+
+        case 'CHECK_MODEL_EXISTS':
+          debugLog('onMessage', 'Processing CHECK_MODEL_EXISTS', message.data);
+          try {
+            const result = await checkModelExists(message.data.source, message.data.sourceId);
+            sendResponse(result);
+          } catch (error) {
+            debugLog('onMessage', 'Error checking model existence', error);
+            sendResponse({ 
+              exists: false,
+              error: error instanceof Error ? error.message : 'Failed to check model'
+            });
+          }
           break;
 
         default: {
@@ -449,13 +523,12 @@ chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) =>
     }
   };
 
-  // Keep message channel open for async response
   handleMessage().catch(error => {
     debugLog('onMessage', 'Unhandled error in message handler', error);
     sendResponse({ error: 'Internal error' });
   });
 
-  return true; // Keep message channel open
+  return true;
 });
 
 debugLog('ServiceWorker', 'Initialization complete');
@@ -466,3 +539,127 @@ interface ExtendedServiceWorkerGlobalScope extends ServiceWorkerGlobalScope {
 }
 
 (self as ExtendedServiceWorkerGlobalScope).debugLogs = debugLogs;
+
+// Function to get the current auth token
+async function getAuthToken(): Promise<string | null> {
+  try {
+    // First try to get the session from Supabase
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      debugLog('getAuthToken', 'Found Supabase session token');
+      return session.access_token;
+    }
+
+    // If no Supabase session, try chrome storage
+    const { token } = await chrome.storage.local.get('token');
+    if (token) {
+      debugLog('getAuthToken', 'Found token in chrome storage');
+      return token;
+    }
+
+    debugLog('getAuthToken', 'No authentication token found');
+    return null;
+  } catch (error) {
+    debugLog('getAuthToken', 'Error getting auth token', error);
+    return null;
+  }
+}
+
+// Function to create a model in the API
+async function createModel(modelData: CreateModelData): Promise<ModelResponse> {
+  debugLog('createModel', 'Creating model', modelData);
+
+  try {
+    // Get auth token
+    const token = await getAuthToken();
+    if (!token) {
+      debugLog('createModel', 'No authentication token found');
+      throw new Error('Not authenticated - Please log in via the extension popup');
+    }
+
+    debugLog('createModel', 'Attempting to create model with auth token');
+    
+    // Create model using local dev API
+    const API_URL = process.env.NODE_ENV === 'development' 
+      ? 'http://127.0.0.1:3030/v1/models'
+      : 'https://api.hive3d.io/v1/models';
+    
+    debugLog('createModel', `Using API endpoint: ${API_URL}`);
+
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        source: modelData.source,
+        name: modelData.name,
+        designer: modelData.designer,
+        images: modelData.images,
+        sourceUrl: modelData.url,
+        sourceId: modelData.modelId,
+        metadata: modelData.metadata,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      debugLog('createModel', 'API error response', error);
+      if (response.status === 401) {
+        throw new Error('Authentication expired - Please log in again via the extension popup');
+      }
+      throw new Error(error.message || 'Failed to create model');
+    }
+
+    const result = await response.json();
+    debugLog('createModel', 'Model created successfully', result);
+    return result;
+  } catch (error) {
+    debugLog('createModel', 'Error creating model', error);
+    throw error;
+  }
+}
+
+// Function to check if a model exists
+async function checkModelExists(source: string, sourceId: string): Promise<{ exists: boolean; modelId?: string }> {
+  debugLog('checkModelExists', 'Checking if model exists', { source, sourceId });
+
+  try {
+    // Get auth token
+    const token = await getAuthToken();
+    if (!token) {
+      debugLog('checkModelExists', 'No authentication token found');
+      throw new Error('Not authenticated - Please log in via the extension popup');
+    }
+
+    debugLog('checkModelExists', 'Checking model existence');
+    
+    // Use local dev API if in development
+    const API_URL = process.env.NODE_ENV === 'development' 
+      ? `http://127.0.0.1:3030/v1/models/exists?source=${source}&sourceId=${sourceId}`
+      : `https://api.hive3d.io/v1/models/exists?source=${source}&sourceId=${sourceId}`;
+    
+    debugLog('checkModelExists', `Using API endpoint: ${API_URL}`);
+
+    const response = await fetch(API_URL, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      debugLog('checkModelExists', 'API error response', error);
+      throw new Error(error.message || 'Failed to check model');
+    }
+
+    const result = await response.json();
+    debugLog('checkModelExists', 'Check completed successfully', result);
+    return result;
+  } catch (error) {
+    debugLog('checkModelExists', 'Error checking model', error);
+    throw error;
+  }
+}

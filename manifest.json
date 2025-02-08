@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Hive 3D Harvest",
   "version": "1.0.0",
-  "description": "Harvest 3D printing materials from Amazon",
+  "description": "Harvest 3D models and materials from various sources",
   "permissions": [
     "storage",
     "tabs",
@@ -10,7 +10,11 @@
   ],
   "host_permissions": [
     "https://*.amazon.com/*",
-    "https://tdutfrehwalqpriivgvq.supabase.co/*"
+    "https://*.thangs.com/*",
+    "https://api.hive3d.io/*",
+    "https://*.supabase.co/*",
+    "http://127.0.0.1:3030/*",
+    "http://localhost:3030/*"
   ],
   "background": {
     "service_worker": "assets/background.js",
@@ -20,13 +24,17 @@
     {
       "matches": ["https://*.amazon.com/*"],
       "js": ["assets/contentScript.js"]
+    },
+    {
+      "matches": ["https://*.thangs.com/*"],
+      "js": ["assets/thangs.js"]
     }
   ],
   "action": {
     "default_popup": "index.html"
   },
   "content_security_policy": {
-    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self' https://tdutfrehwalqpriivgvq.supabase.co"
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self' https://api.hive3d.io https://*.supabase.co http://127.0.0.1:3030 http://localhost:3030"
   },
   "web_accessible_resources": [{
     "resources": [

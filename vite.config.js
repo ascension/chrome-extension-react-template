@@ -27,11 +27,14 @@ export default defineConfig({
             input: {
                 main: resolve(__dirname, 'index.html'),
                 background: resolve(__dirname, 'src/background.ts'),
-                contentScript: resolve(__dirname, 'src/contentScript.ts')
+                contentScript: resolve(__dirname, 'src/contentScript.ts'),
+                thangs: resolve(__dirname, 'src/contentScript/thangs.ts')
             },
             output: {
                 entryFileNames: function (chunkInfo) {
-                    if (chunkInfo.name === 'background' || chunkInfo.name === 'contentScript') {
+                    if (chunkInfo.name === 'background' ||
+                        chunkInfo.name === 'contentScript' ||
+                        chunkInfo.name === 'thangs') {
                         return 'assets/[name].js';
                     }
                     return 'assets/[name]-[hash].js';

@@ -40,6 +40,7 @@ function AppContent() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [showColorAnalyzer, setShowColorAnalyzer] = useState(false);
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [isDebugEnabled, setIsDebugEnabled] = useState(false);
   const [tabInfo, setTabInfo] = useState<TabInfo>({
     isAmazon: false,
     url: null,
@@ -51,6 +52,29 @@ function AppContent() {
 
   const [productInfo, setProductInfo] = useState<ProductInfo | null>(null);
   const [isColorAnalyzerMode] = useState(() => window.location.hash === '#/color-analyzer');
+
+  // Add effect to check initial debug state
+  useEffect(() => {
+    chrome.storage.local.get('debugEnabled', (result) => {
+      setIsDebugEnabled(result.debugEnabled || false);
+    });
+  }, []);
+
+  // Add function to handle debug toggle
+  const handleDebugToggle = () => {
+    const newState = !isDebugEnabled;
+    setIsDebugEnabled(newState);
+    chrome.storage.local.set({ debugEnabled: newState });
+    // Send message to content scripts about debug state change
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs[0]?.id) {
+        chrome.tabs.sendMessage(tabs[0].id, {
+          type: 'TOGGLE_DEBUG',
+          data: { enabled: newState }
+        });
+      }
+    });
+  };
 
   // Get product info when in color analyzer mode
   useEffect(() => {
@@ -363,6 +387,31 @@ function AppContent() {
             }}
           >
             Logout
+          </button>
+        </div>
+        <div style={{
+          marginTop: '8px',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: '8px',
+          fontSize: '12px'
+        }}>
+          <span>Debug Mode:</span>
+          <button
+            onClick={handleDebugToggle}
+            style={{
+              padding: '4px 8px',
+              fontSize: '11px',
+              backgroundColor: isDebugEnabled ? '#4CAF50' : '#f0f0f0',
+              color: isDebugEnabled ? 'white' : '#666',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s'
+            }}
+          >
+            {isDebugEnabled ? 'Enabled' : 'Disabled'}
           </button>
         </div>
       </header>

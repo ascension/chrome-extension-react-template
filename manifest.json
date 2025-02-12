@@ -3,18 +3,15 @@
   "name": "Hive 3D Harvest",
   "version": "1.0.0",
   "description": "Harvest 3D models and materials from various sources",
-  "permissions": [
-    "storage",
-    "tabs",
-    "activeTab"
-  ],
+  "permissions": ["storage", "tabs", "activeTab"],
   "host_permissions": [
     "https://*.amazon.com/*",
     "https://*.thangs.com/*",
-    "https://api.hive3d.io/*",
+    "https://api.hiv3d.com/*",
     "https://*.supabase.co/*",
     "http://127.0.0.1:3030/*",
-    "http://localhost:3030/*"
+    "http://localhost:3030/*",
+    "https://seller-us.tiktok.com/*"
   ],
   "background": {
     "service_worker": "assets/background.js",
@@ -28,19 +25,23 @@
     {
       "matches": ["https://*.thangs.com/*"],
       "js": ["assets/thangs.js"]
+    },
+    {
+      "matches": ["https://seller-us.tiktok.com/*"],
+      "js": ["assets/tiktokShop.js"],
+      "css": ["assets/tiktokShop.css"]
     }
   ],
   "action": {
     "default_popup": "index.html"
   },
   "content_security_policy": {
-    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self' https://api.hive3d.io https://*.supabase.co http://127.0.0.1:3030 http://localhost:3030"
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self' https://api.hiv3d.com https://*.supabase.co http://127.0.0.1:3030 http://localhost:3030 https://seller-us.tiktok.com"
   },
-  "web_accessible_resources": [{
-    "resources": [
-      "index.html",
-      "assets/*"
-    ],
-    "matches": ["<all_urls>"]
-  }]
+  "web_accessible_resources": [
+    {
+      "resources": ["index.html", "assets/*"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }

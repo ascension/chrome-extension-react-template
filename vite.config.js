@@ -2,7 +2,6 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
 import { resolve } from 'path';
-// https://vitejs.dev/config/
 export default defineConfig({
     plugins: [
         react(),
@@ -15,6 +14,11 @@ export default defineConfig({
                 {
                     src: 'public/icons/*',
                     dest: 'icons/'
+                },
+                {
+                    src: 'src/contentScript/tiktokShop.css',
+                    dest: 'assets/',
+                    rename: 'tiktokShop.css'
                 }
             ]
         })
@@ -25,25 +29,14 @@ export default defineConfig({
         sourcemap: true,
         rollupOptions: {
             input: {
-                main: resolve(__dirname, 'index.html'),
-                background: resolve(__dirname, 'src/background.ts'),
-                contentScript: resolve(__dirname, 'src/contentScript.ts'),
-                thangs: resolve(__dirname, 'src/contentScript/thangs.ts')
+                main: resolve(__dirname, 'index.html')
             },
             output: {
-                entryFileNames: function (chunkInfo) {
-                    if (chunkInfo.name === 'background' ||
-                        chunkInfo.name === 'contentScript' ||
-                        chunkInfo.name === 'thangs') {
-                        return 'assets/[name].js';
-                    }
-                    return 'assets/[name]-[hash].js';
-                },
+                entryFileNames: 'assets/[name]-[hash].js',
                 chunkFileNames: 'assets/[name]-[hash].js',
-                assetFileNames: 'assets/[name]-[hash][extname]'
+                assetFileNames: 'assets/[name].[ext]'
             }
-        },
-        target: 'esnext'
+        }
     },
     resolve: {
         alias: {

@@ -5,7 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "npm run build:main && npm run build:content",
+    "build:main": "tsc -b && vite build",
+    "build:content": "npm run build:tiktok && npm run build:amazon && npm run build:thangs && npm run build:background",
+    "build:tiktok": "vite build --config vite.content.config.ts --mode tiktok",
+    "build:amazon": "vite build --config vite.content.config.ts --mode amazon",
+    "build:thangs": "vite build --config vite.content.config.ts --mode thangs",
+    "build:background": "vite build --config vite.content.config.ts --mode background",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
   },

@@ -582,7 +582,7 @@ async function createModel(modelData: CreateModelData): Promise<ModelResponse> {
     // Create model using local dev API
     const API_URL = process.env.NODE_ENV === 'development' 
       ? 'http://127.0.0.1:3030/v1/models'
-      : 'https://api.hive3d.io/v1/models';
+      : 'https://api.hiv3d.com/v1/models';
     
     debugLog('createModel', `Using API endpoint: ${API_URL}`);
 
@@ -638,7 +638,7 @@ async function checkModelExists(source: string, sourceId: string): Promise<{ exi
     // Use local dev API if in development
     const API_URL = process.env.NODE_ENV === 'development' 
       ? `http://127.0.0.1:3030/v1/models/exists?source=${source}&sourceId=${sourceId}`
-      : `https://api.hive3d.io/v1/models/exists?source=${source}&sourceId=${sourceId}`;
+      : `https://api.hiv3d.com/v1/models/exists?source=${source}&sourceId=${sourceId}`;
     
     debugLog('checkModelExists', `Using API endpoint: ${API_URL}`);
 

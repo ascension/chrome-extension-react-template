@@ -489,9 +489,6 @@ const addSaveButton = (modelInfo: ThangsModelInfo) => {
       button.disabled = true;
       button.style.backgroundColor = '#6c757d';
       button.textContent = 'Already Saved';
-      status.style.display = 'block';
-      status.style.backgroundColor = '#f8d7da';
-      status.textContent = 'This model has already been saved to your organization';
     }
   }).catch(error => {
     debugLog('addSaveButton', 'Error checking model status', error);

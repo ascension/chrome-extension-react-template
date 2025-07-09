@@ -11,7 +11,8 @@
     "https://*.supabase.co/*",
     "http://127.0.0.1:3030/*",
     "http://localhost:3030/*",
-    "https://seller-us.tiktok.com/*"
+    "https://seller-us.tiktok.com/*",
+    "https://www.patreon.com/*"
   ],
   "background": {
     "service_worker": "assets/background.js",
@@ -28,8 +29,16 @@
     },
     {
       "matches": ["https://seller-us.tiktok.com/*"],
-      "js": ["assets/tiktokShop.js"],
-      "css": ["assets/tiktokShop.css"]
+      "js": ["assets/tiktokShop.js", "assets/tiktokShopDebug.js"],
+      "css": ["assets/tiktokShop.css", "assets/tiktokShopDebug.css"]
+    },
+    {
+      "matches": ["https://www.patreon.com/posts/*"],
+      "js": ["assets/patreon.js"]
+    },
+    {
+      "matches": ["https://www.makerworld.com/models/*", "https://www.makerworld.com/en/models/*", "https://makerworld.com/en/models/*"],
+      "js": ["assets/makerworld.js"]
     }
   ],
   "action": {

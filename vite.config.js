@@ -19,6 +19,11 @@ export default defineConfig({
                     src: 'src/contentScript/tiktokShop.css',
                     dest: 'assets/',
                     rename: 'tiktokShop.css'
+                },
+                {
+                    src: 'src/contentScript/tiktokShopDebug.css',
+                    dest: 'assets/',
+                    rename: 'tiktokShopDebug.css'
                 }
             ]
         })

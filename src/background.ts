@@ -161,7 +161,7 @@ interface CreateModelData {
   name: string;
   designer: string;
   images: string[];
-  source: 'thangs' | 'patreon';
+  source: 'thangs' | 'patreon' | 'makerworld';
   metadata?: {
     modelUrl?: string;
     postId?: string;
@@ -393,7 +393,7 @@ function isCreateModelData(data: unknown): data is CreateModelData {
     typeof msg.designer === 'string' &&
     Array.isArray(msg.images) &&
     msg.images.every((i: unknown): i is string => typeof i === 'string') &&
-    (msg.source === 'thangs' || msg.source === 'patreon') &&
+    (msg.source === 'thangs' || msg.source === 'patreon' || msg.source === 'makerworld') &&
     (msg.metadata === undefined || typeof msg.metadata === 'object')
   );
 }

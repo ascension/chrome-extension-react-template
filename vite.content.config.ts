@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 import { resolve } from 'path'
 
-const getInput = (mode: string) => {
+const getInput = (mode: string): Record<string, string> => {
   switch (mode) {
     case 'tiktok':
       return { tiktokShop: resolve(__dirname, 'src/contentScript/tiktokShop.ts') }
@@ -27,18 +27,45 @@ export default defineConfig(({ mode }) => {
   const isBackground = mode === 'background';
   
   return {
+    define: {
+      // Ensure environment variables are available as string constants
+      'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(process.env.VITE_SUPABASE_URL || ''),
+      'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(process.env.VITE_SUPABASE_ANON_KEY || ''),
+      'import.meta.env.VITE_SUPABASE_CLIENT_ID': JSON.stringify(process.env.VITE_SUPABASE_CLIENT_ID || ''),
+      'import.meta.env.VITE_EXTENSION_NAME': JSON.stringify(process.env.VITE_EXTENSION_NAME || ''),
+      'import.meta.env.VITE_EXTENSION_VERSION': JSON.stringify(process.env.VITE_EXTENSION_VERSION || ''),
+      'import.meta.env.MODE': JSON.stringify(mode),
+      // Service worker polyfills to prevent DOM access
+      ...(isBackground && {
+        'document': 'undefined',
+        'window': 'self',
+        'global': 'globalThis'
+      })
+    },
     build: {
       outDir: 'dist',
       emptyOutDir: false,
       sourcemap: true,
+      ...(isBackground && {
+        // Special configuration for service worker
+        target: 'es2020',
+        minify: false, // Disable minification to see any remaining issues
+      }),
       rollupOptions: {
         input: getInput(mode),
         output: {
-          format: isBackground ? 'es' : 'iife', // Use ES modules for background script
+          format: 'iife', // Use IIFE format for all scripts
           entryFileNames: 'assets/[name].js',
-          extend: !isBackground, // Only extend for content scripts
-          inlineDynamicImports: isBackground // Inline dynamic imports for background script
-        }
+          inlineDynamicImports: true,
+          ...(isBackground && {
+            globals: {
+              'chrome': 'chrome',
+              'self': 'self',
+              'globalThis': 'globalThis'
+            }
+          })
+        },
+        external: []
       }
     }
   }
